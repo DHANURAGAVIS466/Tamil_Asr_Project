@@ -1,0 +1,12 @@
+torch
+transformers
+datasets
+accelerate
+librosa
+soundfile
+jiwer
+pandas
+numpy
+fastapi
+uvicorn
+python-multipart
