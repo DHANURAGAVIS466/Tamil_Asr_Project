@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bot, Zap, Copy, Check, BarChart2, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Bot, Zap, Copy, Check, BarChart2, ShieldCheck, HelpCircle, FileDown, FileText, Download } from 'lucide-react';
 
 export default function TranscriptionResults({ results, isTranscribing }) {
   const [copiedWhisper, setCopiedWhisper] = useState(false);
   const [copiedWav2vec, setCopiedWav2vec] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   if (isTranscribing) {
     return (
@@ -65,8 +67,175 @@ export default function TranscriptionResults({ results, isTranscribing }) {
     }
   };
 
+  const handleDownloadDocx = async () => {
+    setIsExportingDocx(true);
+    try {
+      const payload = {
+        title: "Tamil ASR Transcription Report",
+        audio_name: results?.filename || results?.audio_name || "Tamil Audio Clip",
+        duration_sec: results?.audio_duration_sec || 0,
+        reference: reference || "",
+        whisper_text: whisperData?.text || "",
+        whisper_wer: whisperData?.metrics?.wer_percent || "",
+        whisper_cer: whisperData?.metrics?.cer_percent || "",
+        whisper_latency: whisperData?.latency_sec || 0,
+        wav2vec_text: wav2vecData?.text || "",
+        wav2vec_wer: wav2vecData?.metrics?.wer_percent || "",
+        wav2vec_cer: wav2vecData?.metrics?.cer_percent || "",
+        wav2vec_latency: wav2vecData?.latency_sec || 0,
+      };
+
+      let res = await fetch('/api/export/docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        res = await fetch('http://127.0.0.1:8000/api/export/docx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) throw new Error('Failed to generate DOCX');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tamil_asr_transcription_${Date.now()}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting DOCX:', err);
+      alert('Failed to download DOCX: ' + err.message);
+    } finally {
+      setIsExportingDocx(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsExportingPdf(true);
+    try {
+      const payload = {
+        title: "Tamil ASR Transcription Report",
+        audio_name: results?.filename || results?.audio_name || "Tamil Audio Clip",
+        duration_sec: results?.audio_duration_sec || 0,
+        reference: reference || "",
+        whisper_text: whisperData?.text || "",
+        whisper_wer: whisperData?.metrics?.wer_percent || "",
+        whisper_cer: whisperData?.metrics?.cer_percent || "",
+        whisper_latency: whisperData?.latency_sec || 0,
+        wav2vec_text: wav2vecData?.text || "",
+        wav2vec_wer: wav2vecData?.metrics?.wer_percent || "",
+        wav2vec_cer: wav2vecData?.metrics?.cer_percent || "",
+        wav2vec_latency: wav2vecData?.latency_sec || 0,
+      };
+
+      let res = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        res = await fetch('http://127.0.0.1:8000/api/export/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) throw new Error('Failed to generate PDF');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tamil_asr_transcription_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      alert('Failed to download PDF: ' + err.message);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Export Action Bar */}
+      <div
+        className="glass-card"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+          padding: '12px 18px',
+          background: 'rgba(30, 41, 59, 0.45)',
+          border: '1px solid var(--border-subtle)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileDown size={18} color="var(--accent-indigo)" />
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Export Transcribed Words:
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={handleDownloadDocx}
+            disabled={isExportingDocx}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(30, 58, 138, 0.4))',
+              border: '1px solid rgba(59, 130, 246, 0.4)',
+              color: '#93c5fd',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              cursor: isExportingDocx ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <FileText size={15} />
+            {isExportingDocx ? 'Generating Word...' : 'Download DOCX (.docx)'}
+          </button>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isExportingPdf}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(153, 27, 27, 0.4))',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#fca5a5',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              cursor: isExportingPdf ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Download size={15} />
+            {isExportingPdf ? 'Generating PDF...' : 'Download PDF (.pdf)'}
+          </button>
+        </div>
+      </div>
       {/* Ground Truth Reference Banner (if provided) */}
       {reference && (
         <div

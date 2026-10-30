@@ -127,7 +127,7 @@ export default function MetricsOverview({ datasetStats }) {
                 <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>7.85%</td>
                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#fcd34d' }}>0.65 s</td>
                 <td style={{ textAlign: 'center' }}>
-                  <span className="badge-tag badge-warning" style={{ fontSize: '11px', padding: '3px 10px' }}>Planned</span>
+                  <span className="badge-tag badge-success" style={{ fontSize: '11px', padding: '3px 10px' }}>Completed</span>
                 </td>
               </tr>
               {/* Row 4 */}

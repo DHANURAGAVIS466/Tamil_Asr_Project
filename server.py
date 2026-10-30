@@ -13,7 +13,7 @@ import torch
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from typing import Optional, List
 from transformers import pipeline, AutoProcessor, AutoModelForCTC
@@ -60,41 +60,42 @@ whisper_pipe = None
 wav2vec_processor = None
 wav2vec_model = None
 
-print("=" * 60)
-print(f"Starting Tamil ASR Server on {DEVICE_NAME}...")
-print("=" * 60)
-
-# Initialize Whisper Pipeline
-try:
-    print(f"Loading Whisper model ({WHISPER_MODEL_ID})...")
-    whisper_pipe = pipeline(
-        task="automatic-speech-recognition",
-        model=WHISPER_MODEL_ID,
-        device=DEVICE
-    )
-    print("[OK] Whisper model loaded successfully.")
-except Exception as e:
-    print(f"[WARN] Whisper initialization notice: {e}")
+def get_whisper_pipe():
+    global whisper_pipe
+    if whisper_pipe is not None:
+        return whisper_pipe
+    try:
+        print(f"Loading Whisper model ({WHISPER_MODEL_ID})...", flush=True)
+        whisper_pipe = pipeline(
+            task="automatic-speech-recognition",
+            model=WHISPER_MODEL_ID,
+            device=DEVICE
+        )
+        print("[OK] Whisper model loaded successfully.", flush=True)
+    except Exception as e:
+        print(f"[WARN] Whisper initialization notice: {e}", flush=True)
+    return whisper_pipe
 
 def try_load_wav2vec2():
     global wav2vec_processor, wav2vec_model
     if wav2vec_model is not None and wav2vec_processor is not None:
         return True
     try:
-        print(f"Attempting to load Wav2Vec2 model ({WAV2VEC_MODEL_ID})...")
+        print(f"Attempting to load Wav2Vec2 model ({WAV2VEC_MODEL_ID})...", flush=True)
         proc = AutoProcessor.from_pretrained(WAV2VEC_MODEL_ID, local_files_only=True)
         model = AutoModelForCTC.from_pretrained(WAV2VEC_MODEL_ID, local_files_only=True)
         model.eval()
         wav2vec_processor = proc
         wav2vec_model = model
-        print("[OK] Wav2Vec2 model loaded successfully.")
+        print("[OK] Wav2Vec2 model loaded successfully.", flush=True)
         return True
     except Exception as e:
-        print(f"[INFO] Wav2Vec2 not fully cached yet ({e}). Whisper is active as primary model.")
+        print(f"[INFO] Wav2Vec2 not fully cached yet ({e}). Whisper is active as primary model.", flush=True)
         return False
 
-# Initial attempt to load Wav2Vec2 if already cached
-try_load_wav2vec2()
+import threading
+threading.Thread(target=get_whisper_pipe, daemon=True).start()
+threading.Thread(target=try_load_wav2vec2, daemon=True).start()
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -479,9 +480,10 @@ async def transcribe_audio(
             return results
 
         # 1. Whisper Transcription
-        if whisper_pipe is not None:
+        active_whisper = get_whisper_pipe()
+        if active_whisper is not None:
             t0 = time.time()
-            whisper_out = whisper_pipe(
+            whisper_out = active_whisper(
                 {
                     "raw": audio_array,
                     "sampling_rate": TARGET_SAMPLE_RATE
@@ -590,6 +592,292 @@ async def transcribe_audio(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
+class ExportTranscriptionRequest(BaseModel):
+    title: Optional[str] = "Tamil ASR Transcription Report"
+    audio_name: Optional[str] = "Tamil Speech Audio"
+    duration_sec: Optional[float] = 0.0
+    reference: Optional[str] = ""
+    whisper_text: Optional[str] = ""
+    whisper_wer: Optional[str] = ""
+    whisper_cer: Optional[str] = ""
+    whisper_latency: Optional[float] = 0.0
+    wav2vec_text: Optional[str] = ""
+    wav2vec_wer: Optional[str] = ""
+    wav2vec_cer: Optional[str] = ""
+    wav2vec_latency: Optional[float] = 0.0
+
+@app.post("/api/export/docx")
+async def export_transcription_docx(data: ExportTranscriptionRequest):
+    """Generate and return a formatted Microsoft Word (.docx) document of the transcription results."""
+    try:
+        import docx
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+
+        doc = docx.Document()
+
+        # Title
+        title_p = doc.add_paragraph()
+        r1 = title_p.add_run("Tamil Speech Recognition Transcription Report")
+        r1.font.size = Pt(20)
+        r1.font.bold = True
+        r1.font.color.rgb = RGBColor(30, 41, 59)
+        title_p.paragraph_format.space_after = Pt(2)
+
+        sub_p = doc.add_paragraph()
+        r2 = sub_p.add_run("தமிழ் தானியங்கி பேச்சு அறிதல் அறிக்கை")
+        r2.font.size = Pt(13)
+        r2.font.bold = True
+        r2.font.color.rgb = RGBColor(79, 70, 229)
+        sub_p.paragraph_format.space_after = Pt(14)
+
+        # Metadata
+        meta_table = doc.add_table(rows=3, cols=2)
+        meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        meta_table.style = 'Light Shading Accent 1' if 'Light Shading Accent 1' in [s.name for s in doc.styles] else 'Table Grid'
+
+        meta_data = [
+            ("Audio Clip / Source:", data.audio_name or "Custom Audio"),
+            ("Audio Duration:", f"{data.duration_sec:.2f} seconds" if data.duration_sec else "N/A"),
+            ("Generated Date & Time:", time.strftime("%Y-%m-%d %H:%M:%S"))
+        ]
+        for idx, (label, val) in enumerate(meta_data):
+            row_cells = meta_table.rows[idx].cells
+            row_cells[0].paragraphs[0].add_run(label).bold = True
+            row_cells[1].paragraphs[0].add_run(str(val))
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(8)
+
+        # Ground truth
+        if data.reference and data.reference.strip():
+            h_ref = doc.add_heading("Ground Truth Reference (OpenSLR-65):", level=2)
+            h_ref.paragraph_format.space_before = Pt(10)
+            ref_p = doc.add_paragraph()
+            ref_p.paragraph_format.left_indent = Inches(0.2)
+            ref_run = ref_p.add_run(data.reference.strip())
+            ref_run.font.size = Pt(11.5)
+            ref_run.font.italic = True
+            ref_run.font.color.rgb = RGBColor(6, 95, 70)
+
+        # Whisper Tiny
+        h_w = doc.add_heading("1. Whisper-Tiny Model Transcription (39M Parameters):", level=2)
+        h_w.paragraph_format.space_before = Pt(14)
+        w_text_p = doc.add_paragraph()
+        w_text_p.paragraph_format.left_indent = Inches(0.2)
+        w_run = w_text_p.add_run(data.whisper_text or "No transcription generated")
+        w_run.font.size = Pt(12)
+        w_run.font.bold = True
+        w_run.font.color.rgb = RGBColor(15, 23, 42)
+
+        w_meta = doc.add_paragraph()
+        w_meta.paragraph_format.left_indent = Inches(0.2)
+        metrics_str = []
+        if data.whisper_wer:
+            metrics_str.append(f"WER: {data.whisper_wer}")
+        if data.whisper_cer:
+            metrics_str.append(f"CER: {data.whisper_cer}")
+        if data.whisper_latency:
+            metrics_str.append(f"Latency: {data.whisper_latency:.2f}s")
+        if metrics_str:
+            m_run = w_meta.add_run("Performance Metrics: " + " | ".join(metrics_str))
+            m_run.font.size = Pt(9.5)
+            m_run.font.color.rgb = RGBColor(100, 116, 139)
+
+        # Wav2Vec2
+        h_v = doc.add_heading("2. Wav2Vec2-Large-XLSR-53 Tamil Transcription (315M):", level=2)
+        h_v.paragraph_format.space_before = Pt(14)
+        v_text_p = doc.add_paragraph()
+        v_text_p.paragraph_format.left_indent = Inches(0.2)
+        v_run = v_text_p.add_run(data.wav2vec_text or "No transcription generated")
+        v_run.font.size = Pt(12)
+        v_run.font.bold = True
+        v_run.font.color.rgb = RGBColor(15, 23, 42)
+
+        v_meta = doc.add_paragraph()
+        v_meta.paragraph_format.left_indent = Inches(0.2)
+        v_metrics_str = []
+        if data.wav2vec_wer:
+            v_metrics_str.append(f"WER: {data.wav2vec_wer}")
+        if data.wav2vec_cer:
+            v_metrics_str.append(f"CER: {data.wav2vec_cer}")
+        if data.wav2vec_latency:
+            v_metrics_str.append(f"Latency: {data.wav2vec_latency:.2f}s")
+        if v_metrics_str:
+            vm_run = v_meta.add_run("Performance Metrics: " + " | ".join(v_metrics_str))
+            vm_run.font.size = Pt(9.5)
+            vm_run.font.color.rgb = RGBColor(100, 116, 139)
+
+        # Footer note
+        doc.add_paragraph().paragraph_format.space_after = Pt(12)
+        foot = doc.add_paragraph()
+        foot_r = foot.add_run("Exported from Tamil ASR Benchmarking & Evaluation Engine • OpenSLR-65 Tamil Dataset")
+        foot_r.font.size = Pt(8.5)
+        foot_r.font.italic = True
+        foot_r.font.color.rgb = RGBColor(148, 163, 184)
+
+        buf = io.BytesIO()
+        doc.save(buf)
+        buf.seek(0)
+
+        filename = f"tamil_asr_{int(time.time())}.docx"
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate DOCX: {str(e)}")
+
+@app.post("/api/export/pdf")
+async def export_transcription_pdf(data: ExportTranscriptionRequest):
+    """Generate and return a formatted PDF document of the transcription results."""
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+
+        font_name = "Helvetica"
+        font_path = "C:/Windows/Fonts/Nirmala.ttc"
+        if os.path.exists(font_path):
+            try:
+                pdfmetrics.registerFont(TTFont("Nirmala", font_path, subfontIndex=0))
+                font_name = "Nirmala"
+            except Exception:
+                pass
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'ReportTitle',
+            fontName=font_name,
+            fontSize=18,
+            leading=24,
+            textColor=colors.HexColor('#1e293b')
+        )
+        subtitle_style = ParagraphStyle(
+            'ReportSubtitle',
+            fontName=font_name,
+            fontSize=13,
+            leading=18,
+            textColor=colors.HexColor('#4f46e5')
+        )
+        section_style = ParagraphStyle(
+            'SectionTitle',
+            fontName=font_name,
+            fontSize=12,
+            leading=16,
+            textColor=colors.HexColor('#0f172a'),
+            spaceBefore=10,
+            spaceAfter=4
+        )
+        body_tamil_style = ParagraphStyle(
+            'TamilBody',
+            fontName=font_name,
+            fontSize=12,
+            leading=20,
+            textColor=colors.HexColor('#0f172a')
+        )
+        meta_label_style = ParagraphStyle(
+            'MetaLabel',
+            fontName='Helvetica-Bold',
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor('#475569')
+        )
+        meta_val_style = ParagraphStyle(
+            'MetaVal',
+            fontName=font_name,
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor('#1e293b')
+        )
+        small_style = ParagraphStyle(
+            'Small',
+            fontName='Helvetica',
+            fontSize=8,
+            leading=11,
+            textColor=colors.HexColor('#64748b')
+        )
+
+        story = []
+        story.append(Paragraph("Tamil Speech Recognition Transcription Report", title_style))
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("தமிழ் தானியங்கி பேச்சு அறிதல் அறிக்கை", subtitle_style))
+        story.append(Spacer(1, 10))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#e2e8f0'), spaceBefore=2, spaceAfter=12))
+
+        # Metadata Table
+        table_data = [
+            [Paragraph("Audio Source:", meta_label_style), Paragraph(str(data.audio_name or "Custom Audio"), meta_val_style)],
+            [Paragraph("Duration:", meta_label_style), Paragraph(f"{data.duration_sec:.2f} seconds" if data.duration_sec else "N/A", meta_val_style)],
+            [Paragraph("Exported At:", meta_label_style), Paragraph(time.strftime("%Y-%m-%d %H:%M:%S"), meta_val_style)]
+        ]
+        t = Table(table_data, colWidths=[100, 420])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8fafc')),
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e1')),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+        ]))
+        story.append(t)
+        story.append(Spacer(1, 14))
+
+        # Reference
+        if data.reference and data.reference.strip():
+            story.append(Paragraph("<b>Ground Truth Reference (OpenSLR-65)</b>", section_style))
+            ref_t = Table([[Paragraph(data.reference.strip(), body_tamil_style)]], colWidths=[520])
+            ref_t.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#ecfdf5')),
+                ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#10b981')),
+                ('PADDING', (0,0), (-1,-1), 8),
+            ]))
+            story.append(ref_t)
+            story.append(Spacer(1, 12))
+
+        # Whisper-Tiny
+        whisper_metrics_str = f"WER: {data.whisper_wer or 'N/A'} | CER: {data.whisper_cer or 'N/A'} | Latency: {data.whisper_latency or 0:.2f}s"
+        story.append(Paragraph(f"<b>1. Whisper-Tiny (39M) Transcription</b> &nbsp; <font size=9 color='#6366f1'>({whisper_metrics_str})</font>", section_style))
+        w_box = Table([[Paragraph(data.whisper_text or "No transcription generated", body_tamil_style)]], colWidths=[520])
+        w_box.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f1f5f9')),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#6366f1')),
+            ('PADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(w_box)
+        story.append(Spacer(1, 12))
+
+        # Wav2Vec2
+        v_metrics_str = f"WER: {data.wav2vec_wer or 'N/A'} | CER: {data.wav2vec_cer or 'N/A'} | Latency: {data.wav2vec_latency or 0:.2f}s"
+        story.append(Paragraph(f"<b>2. Wav2Vec2-Large-XLSR-53 Tamil (315M)</b> &nbsp; <font size=9 color='#a855f7'>({v_metrics_str})</font>", section_style))
+        v_box = Table([[Paragraph(data.wav2vec_text or "No transcription generated", body_tamil_style)]], colWidths=[520])
+        v_box.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#fbf7ff')),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#a855f7')),
+            ('PADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(v_box)
+        story.append(Spacer(1, 20))
+
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#cbd5e1'), spaceBefore=2, spaceAfter=8))
+        story.append(Paragraph("Tamil Automatic Speech Recognition Benchmark Suite • OpenSLR-65 Dataset", small_style))
+
+        doc.build(story)
+        buf.seek(0)
+
+        filename = f"tamil_asr_{int(time.time())}.pdf"
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

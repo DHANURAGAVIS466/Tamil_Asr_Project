@@ -10,7 +10,7 @@
 | :--- | :---: | :---: | :---: | :---: |
 | **Whisper-tiny (baseline)** | **28.45** | **12.30** | **0.62** | Baseline |
 | **Wav2Vec2 XLSR-53 Tamil (baseline)** | **32.10** | **14.85** | **1.45** | Baseline |
-| **Fine-tuned model** | **19.20** | **7.85** | **0.65** | Planned |
+| **Fine-tuned model** | **19.20** | **7.85** | **0.65** | Completed |
 | **Multi-model combination** | **14.60** | **5.90** | **1.85** | Planned |
 | **With glossary-based correction** | **11.40** | **3.80** | **0.72** | Planned |
 
@@ -22,7 +22,7 @@
 | --- | --- | --- | --- | --- |
 | Whisper-tiny (baseline) | 28.45 | 12.30 | 0.62 | Baseline |
 | Wav2Vec2 XLSR-53 Tamil (baseline) | 32.10 | 14.85 | 1.45 | Baseline |
-| Fine-tuned model | 19.20 | 7.85 | 0.65 | Planned |
+| Fine-tuned model | 19.20 | 7.85 | 0.65 | Completed |
 | Multi-model combination | 14.60 | 5.90 | 1.85 | Planned |
 | With glossary-based correction | 11.40 | 3.80 | 0.72 | Planned |
 
@@ -40,7 +40,7 @@
 \textbf{System} & \textbf{WER (\%)} & \textbf{CER (\%)} & \textbf{Time per clip (s)} & \textbf{Status} \\ \hline
 Whisper-tiny (baseline) & 28.45 & 12.30 & 0.62 & Baseline \\ \hline
 Wav2Vec2 XLSR-53 Tamil (baseline) & 32.10 & 14.85 & 1.45 & Baseline \\ \hline
-Fine-tuned model & 19.20 & 7.85 & 0.65 & Planned \\ \hline
+Fine-tuned model & 19.20 & 7.85 & 0.65 & Completed \\ \hline
 Multi-model combination & 14.60 & 5.90 & 1.85 & Planned \\ \hline
 With glossary-based correction & 11.40 & 3.80 & 0.72 & Planned \\ \hline
 \end{tabular}

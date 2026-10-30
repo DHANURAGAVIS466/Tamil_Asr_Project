@@ -23,8 +23,8 @@ export default function RoadmapViewer() {
       step: 3,
       title: 'Domain Adaptation & Fine-Tuning',
       desc: 'Fine-tune acoustic and language models with LoRA/PEFT on target Tamil domain vocabularies (e.g., administrative records).',
-      status: 'current',
-      badge: 'Next Milestone'
+      status: 'completed',
+      badge: 'Completed'
     },
     {
       step: 4,
