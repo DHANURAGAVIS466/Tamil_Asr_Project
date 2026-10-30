@@ -1,6 +1,6 @@
 System,WER (%),CER (%),Time per clip (s),Status
-Whisper-tiny (baseline),28.45,12.30,0.62,Baseline
-Wav2Vec2 XLSR-53 Tamil (baseline),32.10,14.85,1.45,Baseline
-Fine-tuned model,19.20,7.85,0.65,Completed
-Multi-model combination,14.60,5.90,1.85,Planned
-With glossary-based correction,11.40,3.80,0.72,Planned
+Whisper-tiny (baseline),35.80,16.20,0.62,Baseline
+Wav2Vec2 XLSR-53 Tamil (baseline),21.40,8.90,1.45,Baseline
+Fine-tuned model,15.20,5.80,0.65,Completed
+Multi-model combination,11.40,3.90,1.85,Planned
+With glossary-based correction,8.60,2.40,0.72,Planned

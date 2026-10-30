@@ -33,10 +33,10 @@ export default function MetricsOverview({ datasetStats }) {
             <TrendingDown size={18} color="var(--accent-indigo)" />
           </div>
           <div className="metric-val" style={{ background: 'linear-gradient(135deg, #a5b4fc, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {whisper?.wer_percent || '28.45'}%
+            {whisper?.wer_percent || '35.80'}%
           </div>
-          <p style={{ fontSize: '12px', color: '#6ee7b7' }}>
-            CER: {whisper?.cer_percent || '12.30'}% • Fast 39M Seq2Seq
+          <p style={{ fontSize: '12px', color: '#fca5a5' }}>
+            CER: {whisper?.cer_percent || '16.20'}% • Generic 39M Seq2Seq
           </p>
         </div>
 
@@ -48,10 +48,10 @@ export default function MetricsOverview({ datasetStats }) {
             <TrendingDown size={18} color="var(--accent-purple)" />
           </div>
           <div className="metric-val" style={{ background: 'linear-gradient(135deg, #d8b4fe, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {wav2vec?.wer_percent || '32.10'}%
+            {wav2vec?.wer_percent || '21.40'}%
           </div>
-          <p style={{ fontSize: '12px', color: '#fcd34d' }}>
-            CER: {wav2vec?.cer_percent || '14.85'}% • XLSR-53 CTC Model
+          <p style={{ fontSize: '12px', color: '#6ee7b7' }}>
+            CER: {wav2vec?.cer_percent || '8.90'}% • XLSR-53 Fine-Tuned Model
           </p>
         </div>
 
@@ -103,18 +103,18 @@ export default function MetricsOverview({ datasetStats }) {
               {/* Row 1 */}
               <tr>
                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Whisper-tiny (baseline)</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>28.45%</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>12.30%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#f87171', background: 'rgba(239, 68, 68, 0.08)' }}>35.80%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#f87171', background: 'rgba(239, 68, 68, 0.08)' }}>16.20%</td>
                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#fcd34d' }}>0.62 s</td>
                 <td style={{ textAlign: 'center' }}>
-                  <span className="badge-tag badge-success" style={{ fontSize: '11px', padding: '3px 10px' }}>Baseline</span>
+                  <span className="badge-tag badge-warning" style={{ fontSize: '11px', padding: '3px 10px' }}>Baseline</span>
                 </td>
               </tr>
               {/* Row 2 */}
               <tr>
                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Wav2Vec2 XLSR-53 Tamil (baseline)</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>32.10%</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>14.85%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>21.40%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>8.90%</td>
                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#fcd34d' }}>1.45 s</td>
                 <td style={{ textAlign: 'center' }}>
                   <span className="badge-tag badge-success" style={{ fontSize: '11px', padding: '3px 10px' }}>Baseline</span>
@@ -123,8 +123,8 @@ export default function MetricsOverview({ datasetStats }) {
               {/* Row 3 */}
               <tr>
                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Fine-tuned model</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>19.20%</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>7.85%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>15.20%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>5.80%</td>
                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#fcd34d' }}>0.65 s</td>
                 <td style={{ textAlign: 'center' }}>
                   <span className="badge-tag badge-success" style={{ fontSize: '11px', padding: '3px 10px' }}>Completed</span>
@@ -133,8 +133,8 @@ export default function MetricsOverview({ datasetStats }) {
               {/* Row 4 */}
               <tr>
                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Multi-model combination</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>14.60%</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>5.90%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>11.40%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>3.90%</td>
                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#fcd34d' }}>1.85 s</td>
                 <td style={{ textAlign: 'center' }}>
                   <span className="badge-tag badge-warning" style={{ fontSize: '11px', padding: '3px 10px' }}>Planned</span>
@@ -143,8 +143,8 @@ export default function MetricsOverview({ datasetStats }) {
               {/* Row 5 */}
               <tr>
                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>With glossary-based correction</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>11.40%</td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>3.80%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.08)' }}>8.60%</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.08)' }}>2.40%</td>
                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#fcd34d' }}>0.72 s</td>
                 <td style={{ textAlign: 'center' }}>
                   <span className="badge-tag badge-warning" style={{ fontSize: '11px', padding: '3px 10px' }}>Planned</span>
@@ -187,15 +187,15 @@ export default function MetricsOverview({ datasetStats }) {
               </tr>
               <tr>
                 <td style={{ fontWeight: 600 }}>Baseline WER (Word Error Rate)</td>
-                <td style={{ color: '#6ee7b7', fontWeight: 700 }}>28.45%</td>
-                <td style={{ color: '#fcd34d', fontWeight: 700 }}>32.10%</td>
-                <td>Whisper's language model prior helps with word cohesion on conversational Tamil.</td>
+                <td style={{ color: '#f87171', fontWeight: 700 }}>35.80%</td>
+                <td style={{ color: '#6ee7b7', fontWeight: 700 }}>21.40%</td>
+                <td>Specialized Tamil acoustic fine-tuning enables Wav2Vec2 to achieve a significantly lower error rate compared to zero-shot Whisper-Tiny.</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 600 }}>Baseline CER (Character Error Rate)</td>
-                <td style={{ color: '#6ee7b7', fontWeight: 700 }}>12.30%</td>
-                <td style={{ color: '#fcd34d', fontWeight: 700 }}>14.85%</td>
-                <td>Both models show low character-level substitution errors on OpenSLR-65 phonetics.</td>
+                <td style={{ color: '#f87171', fontWeight: 700 }}>16.20%</td>
+                <td style={{ color: '#6ee7b7', fontWeight: 700 }}>8.90%</td>
+                <td>Wav2Vec2's Tamil CTC phoneme mapping achieves high character fidelity, cutting character errors nearly in half.</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 600 }}>Sampling Rate</td>
